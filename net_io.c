@@ -314,24 +314,21 @@ void reportState(int isConnected) {
 	sock = socket(AF_INET , SOCK_STREAM , 0);
 	if (sock == -1)
 	{
-		fprintf("Could not create socket");
+		fprintf(stderr,"Could not create socket");
 	}
-	fprintf("Socket created\n");
 	
 	server.sin_addr.s_addr = inet_addr("192.168.1.4");
 	server.sin_family = AF_INET;
 	server.sin_port = htons( 80 );
 
-	//Connect to remote server
 	if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0)
 	{
-		fprintf("connect failed. Error");
+		fprintf(stderr,"connect failed. Error");
 	}
 	sprintf(message, "{\"status\": \"%s\"}",isConnected == 0 ? disconnected : connected);
-	fprintf("Connected\n");
 	if( send(sock , message , strlen(message) , 0) < 0)
 	{
-			fprintf("Send failed");
+			fprintf(stderr,"Send failed");
 	}
 
 	close(sock);
