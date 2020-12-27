@@ -142,6 +142,7 @@ struct net_service *serviceInit(const char *descr, struct net_writer *writer, he
 struct client *serviceConnect(struct net_connector *con);
 void serviceReconnectCallback(uint64_t now);
 struct client *checkServiceConnected(struct net_connector *con);
+void reportState(int isConnected);
 void serviceListen(struct net_service *service, char *bind_addr, char *bind_ports);
 struct client *createSocketClient(struct net_service *service, int fd);
 struct client *createGenericClient(struct net_service *service, int fd);

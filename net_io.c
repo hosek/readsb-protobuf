@@ -64,6 +64,7 @@
 #include <netdb.h>
 #include <poll.h>
 #include <pthread.h>
+#include <string.h>	//strlen
 
 //
 // ============================= Networking =============================
@@ -234,12 +235,14 @@ struct client *checkServiceConnected(struct net_connector *con) {
     rv = poll(&pfd, 1, 0);
 
     if (rv == -1) {
+        reportState(0);
         // select() error, just return a NULL here, but log it
         fprintf(stderr, "checkServiceConnected: select() error: %s\n", strerror(errno));
         return NULL;
     }
 
     if (rv == 0) {
+        reportState(0);
         // If we've exceeded our connect timeout, bail but try again.
         if (mstime() >= con->connect_timeout) {
             fprintf(stderr, "%s: Connection timed out: %s:%s port %s\n",
@@ -254,6 +257,7 @@ struct client *checkServiceConnected(struct net_connector *con) {
     int optval = -1;
     socklen_t optlen = sizeof (optval);
     if (getsockopt(con->fd, SOL_SOCKET, SO_ERROR, &optval, &optlen) == -1) {
+        reportState(0);
         fprintf(stderr, "getsockopt failed: %d (%s)\n", errno, strerror(errno));
         // Bad stuff going on, but clear this anyway
         con->connecting = 0;
@@ -262,6 +266,7 @@ struct client *checkServiceConnected(struct net_connector *con) {
     }
 
     if (optval != 0) {
+        reportState(0);
         // only 0 means "connection ok"
         fprintf(stderr, "%s: Connection to %s%s port %s failed: %d (%s)\n",
                 con->service->descr, con->address, con->resolved_addr, con->port, optval, strerror(optval));
@@ -275,6 +280,7 @@ struct client *checkServiceConnected(struct net_connector *con) {
 
     c = createSocketClient(con->service, con->fd);
     if (!c) {
+        reportState(0);
         con->connecting = 0;
         fprintf(stderr, "createSocketClient failed on fd %d to %s%s port %s\n",
                 con->fd, con->address, con->resolved_addr, con->port);
@@ -287,12 +293,48 @@ struct client *checkServiceConnected(struct net_connector *con) {
 
     fprintf(stderr, "%s: Connection established: %s%s port %s\n",
             con->service->descr, con->address, con->resolved_addr, con->port);
-
+    reportState(1);
     con->connecting = 0;
     con->connected = 1;
     c->con = con;
 
     return c;
+}
+
+// Report state to server
+
+void reportState(int isConnected) {
+	int sock;
+	struct sockaddr_in server;
+	char message[1000];
+	char connected[] = "connected";
+	char disconnected[] = "disconnected";
+	
+	//Create socket
+	sock = socket(AF_INET , SOCK_STREAM , 0);
+	if (sock == -1)
+	{
+		fprintf("Could not create socket");
+	}
+	fprintf("Socket created\n");
+	
+	server.sin_addr.s_addr = inet_addr("192.168.1.4");
+	server.sin_family = AF_INET;
+	server.sin_port = htons( 80 );
+
+	//Connect to remote server
+	if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0)
+	{
+		fprintf("connect failed. Error");
+	}
+	sprintf(message, "{\"status\": \"%s\"}",isConnected == 0 ? disconnected : connected);
+	fprintf("Connected\n");
+	if( send(sock , message , strlen(message) , 0) < 0)
+	{
+			fprintf("Send failed");
+	}
+
+	close(sock);
 }
 
 // Initiate an outgoing connection.
